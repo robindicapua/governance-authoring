@@ -1,0 +1,195 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "pattern-metadata.schema.json",
+  "title": "Pattern Metadata",
+  "description": "Schema for pattern-tier governance laws — laws for a single-page/single-surface composition (e.g. Card's footer). Unlike journeys, patterns don't inherit from a shared family; each pattern owns its laws outright. Zones replace steps as the unit provisions attach to.",
+  "type": "object",
+  "required": ["pattern", "laws"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Path to this JSON Schema for IDE validation and autocomplete."
+    },
+    "pattern": {
+      "type": "object",
+      "description": "Identity of this pattern.",
+      "required": ["name", "id", "scope", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Human-readable pattern name (e.g. 'Card')."
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Unique kebab-case identifier for this pattern (e.g. 'card')."
+        },
+        "scope": {
+          "type": "string",
+          "pattern": "^[A-Z]{2,6}$",
+          "description": "Scope code that prefixes every law id in this file (e.g. 'CRD')."
+        },
+        "category": {
+          "type": "string",
+          "description": "Domain this pattern belongs to (e.g. 'layout')."
+        },
+        "description": {
+          "type": "string",
+          "description": "What this pattern represents and why it needs pattern-level (not component-level) governance."
+        }
+      }
+    },
+    "zones": {
+      "type": "array",
+      "description": "Named regions of the pattern's single surface, referenced by law provisions for human-readable labels.",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "description": "Unique kebab-case identifier for this zone (e.g. 'footer')."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable zone name."
+          },
+          "description": {
+            "type": "string",
+            "description": "What this zone holds."
+          }
+        }
+      }
+    },
+    "laws": {
+      "type": "array",
+      "description": "The pattern's governance laws — each a citable rule, validated holistically against the full composition of a zone.",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/law" }
+    },
+    "aiHints": {
+      "type": "object",
+      "description": "Hints for AI agents consuming this pattern.",
+      "additionalProperties": false,
+      "properties": {
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Terms that trigger this pattern's laws during intent matching. Become the laws' triggers in the generated index."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Natural language guidance for AI agents on how to apply these laws holistically."
+        }
+      }
+    }
+  },
+  "definitions": {
+    "severity": {
+      "type": "string",
+      "enum": ["error", "warning", "info"],
+      "description": "How hard the law pushes back. error = hard block; warning = flagged for review; info = advisory."
+    },
+    "lawId": {
+      "type": "string",
+      "pattern": "^[A-Z]{2,6}-[0-9]+$",
+      "description": "Authored, stable law citation (e.g. 'CRD-1'). Never reused once retired."
+    },
+    "law": {
+      "type": "object",
+      "required": ["id", "title", "statement", "severity"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/definitions/lawId" },
+        "title": {
+          "type": "string",
+          "description": "Short human sentence naming the law."
+        },
+        "refines": {
+          "type": "string",
+          "pattern": "^[A-Z]{2,6}-[0-9]+$",
+          "description": "Id of another law this law supersedes (lex specialis), if any."
+        },
+        "statement": {
+          "type": "string",
+          "description": "The binding text of the law."
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Why the law exists — the prose justification."
+        },
+        "severity": { "$ref": "#/definitions/severity" },
+        "appliesWhen": {
+          "type": "object",
+          "description": "The trigger / jurisdiction. Common keys: pattern, zone, always.",
+          "additionalProperties": true
+        },
+        "note": {
+          "type": "string",
+          "description": "Authoring note."
+        },
+        "provisions": {
+          "type": "array",
+          "description": "The same law applied to specific zones (the decimal citation, e.g. CRD-1.1).",
+          "items": { "$ref": "#/definitions/provision" }
+        }
+      }
+    },
+    "provision": {
+      "type": "object",
+      "required": ["id", "zone", "constraint"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z]{2,6}-[0-9]+\\.[0-9]+$",
+          "description": "Provision citation (e.g. 'CRD-1.1')."
+        },
+        "zone": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Id of the zone this provision applies to."
+        },
+        "constraint": { "$ref": "#/definitions/constraint" },
+        "labelHint": {
+          "type": "string",
+          "description": "Suggested label text. Informational only — not enforced."
+        }
+      }
+    },
+    "constraint": {
+      "type": "object",
+      "required": ["type", "component"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["required", "forbidden", "limit"],
+          "description": "required = must be present; forbidden = must not appear; limit = bounded count (use min/max)."
+        },
+        "component": {
+          "type": "string",
+          "description": "PascalCase component name (e.g. 'Button')."
+        },
+        "variant": {
+          "type": "string",
+          "description": "The specific variant this constraint targets. Omit to apply to all variants."
+        },
+        "min": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum instance count. Omit for no minimum."
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum instance count. Omit for no maximum."
+        }
+      }
+    }
+  }
+}
